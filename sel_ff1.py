@@ -24,7 +24,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 import MetaTrader5 as mt5
 import numpy as np
-import datetime
+# import datetime
 import pandas as pd
 import pytz
 import pandas_ta as ta
@@ -149,6 +149,8 @@ except Exception as e:
 
 # Convert to DataFrame
 df = pd.DataFrame(events)
+df = df[df["time"].str.lower() != "all day"]
+df = df[df["time"].str.lower() != "tentative"]
 df_high_impact = df.loc[df['impact'] == 'High']
 df.to_csv("forex_factory_calendar.csv", index=False)
 print("Data saved to forex_factory_calendar.csv")
@@ -156,47 +158,42 @@ print("Data saved to forex_factory_calendar.csv")
 
 
 tz = pytz.timezone("Africa/Lagos")
-naija_now = datetime.datetime.now(tz)
-
-
-# minutes_to_add = (time_frame - naija_now.minute % time_frame) % time_frame
-# if minutes_to_add == 0:  # If already at a 5-minute mark, move to the next one
-#     minutes_to_add = time_frame
-# rounded_time = (naija_now + datetime.timedelta(minutes=minutes_to_add)).replace(second=0, microsecond=0)
-
-# Step 3: Calculate the time difference in seconds
+naija_now = datetime.now(tz)
 
 
 # Monitor the events and wait until actual data appears
-for event in events:
-    event_time_str = event["time"]
+# for event in df: # events:
+for row in df.itertuples(index=True):
+    event_time_str = row.time # event["time"]
+    print(event_time_str)
     if event_time_str:
         try:
             event_time = datetime.strptime(event_time_str, "%I:%M%p").time()
-            while datetime.now().time() < event_time:
+            event_time = datetime.combine(naija_now.date(), event_time)
+            if event_time > datetime.now():
                 # remaining_time = (datetime.combine(datetime.today(), event_time) - datetime.now()).total_seconds()
-                time_to_sleep = (event_time - naija_now).total_seconds()
+                time_to_sleep = (event_time - datetime.now()).total_seconds()
                 print('Trade On pause till: ', event_time)        
                 # sleep(time_to_sleep - 2)
                 if time_to_sleep <= 2:
                     break
-                print(f"Waiting for actual value of: {event['event']} ({event['currency']})")
+                print(f"Waiting for actual value of: {row.event} ({row.currency})")
                 time.sleep(time_to_sleep - 2)
 
             # print(f"Waiting for actual value of: {event['event']} ({event['currency']})")
-            while True:
-                try:
-                    actual_value = driver.find_element(By.XPATH, "//td[contains(@class, 'calendar__actual')]").text
-                    if actual_value not in ["", "-"]:
-                        span_class = driver.find_element(By.XPATH, "//td[contains(@class, 'calendar__actual')]/span").get_attribute("class")
-                        status = "Better" if "better" in span_class else "Worse" if "worse" in span_class else "N/A"
-                        print(f"Actual: {actual_value}, Status: {status}")
-                        break
-                except:
-                    pass
-                time.sleep(0.3)
+                while True:
+                    try:
+                        actual_value = driver.find_element(By.XPATH, "//td[contains(@class, 'calendar__actual')]").text
+                        if actual_value not in ["", "-"]:
+                            span_class = driver.find_element(By.XPATH, "//td[contains(@class, 'calendar__actual')]/span").get_attribute("class")
+                            status = "Better" if "better" in span_class else "Worse" if "worse" in span_class else "N/A"
+                            print(f"Actual: {actual_value}, Status: {status}")
+                            break
+                    except:
+                        pass
+                    time.sleep(0.3)
         except Exception as e:
-            print(f"Error processing event {event['event']}: {e}")
+            print(f"Error processing event {row.event}: {e}")
 
 # driver.quit()
 
