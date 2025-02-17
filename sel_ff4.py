@@ -58,8 +58,8 @@ if not mt5.initialize():
 
 def open_trade(symbol, trade_type, volume, magic):
     trade_action = mt5.ORDER_TYPE_BUY if trade_type == "Buy" else mt5.ORDER_TYPE_SELL
-    price = mt5.symbol_info_tick(symbol).ask if trade_type == "Buy" else mt5.symbol_info_tick(symbol).bid,
-    point = point = mt5.symbol_info(symbol).point
+    price = mt5.symbol_info_tick(symbol).ask if trade_type == "Buy" else mt5.symbol_info_tick(symbol).bid
+    point = mt5.symbol_info(symbol).point
     request = {
         "action": mt5.TRADE_ACTION_DEAL,
         "symbol": symbol,
@@ -118,7 +118,7 @@ while True:
                 except:
                     pass
                 # if "red" or "yel" or "ora"  in impact_elem:
-                event_time = datetime.now() + timedelta(minutes=3)    
+                # event_time = datetime.now() + timedelta(minutes=3)    
                 if event_time > datetime.now() - timedelta(minutes=2):
                     print('time to wait: ', (event_time - (datetime.now() + timedelta(minutes=2))).total_seconds(), ' seconds')
                     time.sleep((event_time - (datetime.now() + timedelta(minutes=2))).total_seconds())
@@ -144,7 +144,7 @@ while True:
                                 except:
                                     pass
                     
-                                event_time = datetime.now() + timedelta(seconds=50)  
+                                # event_time = datetime.now() + timedelta(seconds=50)  
                                 if event_time > datetime.now() - timedelta(seconds=40):
                                     # remaining_time = (datetime.combine(datetime.today(), event_time) - datetime.now()).total_seconds()
                                     time_to_sleep = (event_time - datetime.now()).total_seconds()
@@ -172,6 +172,51 @@ while True:
                                                 elif status == "N/A" and actual_value < forecast_elem:
                                                     status = "Worse"
                                                 print(f"Actual: {actual_value}, Status: {status}")
+                                                news_zone = currency_elem
+                                                
+                                                print('News zone: ', news_zone)
+                                                if news_zone == 'GBP':
+                                                    currs1 = ['GBPJPY','GBPUSD','EURGBP', 'GBPCAD']
+                                                    currs2 = ['EURGBP']
+                                                elif news_zone == 'EUR':
+                                                    currs1 = ['EURUSD', 'EURGBP', 'EURCAD']
+                                                    currs2 = []
+                                                elif news_zone == 'USD':
+                                                    currs1 = ['USDJPY', 'USDCAD']
+                                                    currs2 = ['GBPUSD', 'EURUSD', 'XAUUSD', 'AUDUSD', 'BTCUSD', 'NZDUSD']         
+                                                elif news_zone == 'CC':
+                                                    currs = ['BTCUSD', 'ETHUSD', 'DOGUSD', 'SOLUSD']
+                                                elif news_zone == 'AUD':    
+                                                    currs1 = ['AUDCAD', 'AUDCHF', 'AUDJPY', 'AUDNZD', 'AUDUSD']
+                                                    currs2 = []
+                                                elif news_zone == 'JPY':    
+                                                    currs1 = []
+                                                    currs2 = ['GBPJPY', 'AUDJPY', 'USDJPY', 'CADJPY']
+                                                elif news_zone == 'NZD':    
+                                                    currs1 = ['NZDUSD', 'NZDCAD', 'NZDJPY' ]
+                                                    currs2 = ['AUDNZD', 'EURNZD', 'GBPNZD']
+                                                elif news_zone == 'CHF':    
+                                                    currs1 = ['CHFJPY' ]
+                                                    currs2 = ['AUDCHF', 'EURCHF', 'GBPCHF']
+                                                else:
+                                                    currs1 = []  
+                                                    currs2 = []
+                                                    
+                                                
+                                                if status == 'Better':
+                                                    for curr in currs1:
+                                                        
+                                                        open_trade(curr, "Buy", 1.0, 123)
+                                                    for curr in currs2: 
+                                                        open_trade(curr, "Sell", 1.0, 123)
+                                                    
+                                                elif status == 'Worse':
+                                                    for curr in currs1:
+                                                        open_trade(curr, "Sell", 1.0, 123)
+                                                    for curr in currs2: 
+                                                        open_trade(curr, "Buy", 1.0, 123)
+                                                else:
+                                                    print('Gray actual')
                                                 actual_checker = 0
                                                 break
                                         except:
@@ -188,51 +233,7 @@ while True:
         print(f"Error retrieving rows: {e}")
         # driver.quit()
         # exit(1)
-    news_zone = currency_elem
     
-    
-    if news_zone == 'GBP':
-        currs1 = ['GBPJPY','GBPUSD','EURGBP', 'GBPCAD']
-        currs2 = ['EURGBP']
-    elif news_zone == 'EUR':
-        currs1 = ['EURUSD', 'EURGBP', 'EURCAD']
-        currs2 = []
-    elif news_zone == 'USD':
-        currs1 = ['USDJPY', 'USDCAD']
-        currs2 = ['GBPUSD', 'EURUSD', 'XAUUSD', 'AUDUSD', 'BTCUSD', 'NZDUSD']         
-    elif news_zone == 'CC':
-        currs = ['BTCUSD', 'ETHUSD', 'DOGUSD', 'SOLUSD']
-    elif news_zone == 'AUD':    
-        currs1 = ['AUDCAD', 'AUDCHF', 'AUDJPY', 'AUDNZD', 'AUDUSD']
-        currs2 = []
-    elif news_zone == 'JPY':    
-        currs1 = []
-        currs2 = ['GBPJPY', 'AUDJPY', 'USDJPY', 'CADJPY']
-    elif news_zone == 'NZD':    
-        currs1 = ['NZDUSD', 'NZDCAD', 'NZDJPY' ]
-        currs2 = ['AUDNZD', 'EURNZD', 'GBPNZD']
-    elif news_zone == 'CHF':    
-        currs1 = ['CHFJPY' ]
-        currs2 = ['AUDCHF', 'EURCHF', 'GBPCHF']
-    else:
-        currs1 = []  
-        currs2 = []
-        
-    
-    if status == 'Better':
-        for curr in currs1:
-            
-            open_trade(curr, "Buy", 1, 123)
-        for curr in currs2: 
-            open_trade(curr, "Sell", 1, 123)
-        
-    elif status == 'Worse':
-        for curr in currs1:
-            open_trade(curr, "Sell", 1, 123)
-        for curr in currs2: 
-            open_trade(curr, "Buy", 1, 123)
-    else:
-        print('Gray actual')
 
 
 
