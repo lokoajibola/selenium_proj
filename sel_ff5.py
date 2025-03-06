@@ -163,136 +163,143 @@ while True:
                 
                 # open new FF
                 driver.get("https://www.forexfactory.com/calendar?day=today")
-                time.sleep(10)  # Allow page to load
+                time.sleep(1)  # Allow page to load
                             
                         
         # event_time, event_elem, currency_elem, forecast_elem = get_news(row, prev_time_elem)
         
         # rows = driver.find_elements(By.XPATH, "//tr[contains(@class, 'calendar__row')]")
         # status = "N/A"
-        for i in range(len(event_elems)):
-            try: 
-                naija_now = datetime.now(tz)
-                event_time = datetime.strptime(time_elems[i].text, "%I:%M%p").time()
-                event_time = datetime.combine(naija_now.date(), event_time)
-                # print("2 time switched to time format successful")
-                print(f"Done: {event_elems[i].text} ({currency_elems[i].text})")
-                event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
-            except:
-                event_time = 0
-                event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
-                pass
-            
-            # rows = driver.find_elements(By.XPATH, "//tr[contains(@class, 'calendar__row')]")
-            # row = rows[i]
-            # event_time, event_elem, currency_elem, forecast_elem = get_news(i, prev_time_elem, driver)
-            if event_time > datetime.now(tz) - timedelta(seconds=40):
-                    # remaining_time = (datetime.combine(datetime.today(), event_time) - datetime.now()).total_seconds()
-                time_to_sleep = (event_time - datetime.now(tz) + timedelta(seconds=40)).total_seconds()
-                print('2 Trade On pause till: ', event_time, ' seconds time: ', time_to_sleep-1)        
-                # sleep(time_to_sleep - 1)
-                if time_to_sleep > 2:
-                    # break
-                    print(f"2 Waiting for actual value of: {event_elems[i].text} ({currency_elems[i].text})")
-                    time.sleep(time_to_sleep - 1)
-                wait = WebDriverWait(driver, 30)
-    # wait.until(lambda driver: driver.find_element(By.TAG_NAME, "span").text.strip() != ""                                            
-                while actual_checker < 30:
-                # while False:
-                        try:
-                            rows = driver.find_elements(By.XPATH, "//tr[contains(@class, 'calendar__row')]")
-                            row = rows[i]
-                            actual_1 = wait.until(lambda driver: row.find_element(By.TAG_NAME, "span").text.strip() != "")
-                            actual_1 = row.find_element(By.XPATH, ".//td[contains(@class, 'calendar__actual')]")
-                            actual_2 = actual_1.find_element(By.TAG_NAME, "span")
-                            actual_value = row.find_element(By.XPATH, "//td[contains(@class, 'calendar__actual')]").text
-                            
-                            print('here1')
-                            # time.sleep(0.1)
-                            # actual_checker = actual_checker+1
-                            if actual_value not in ["", "-"]:
-                                print('here2')
-                                # span_class = row.find_element(By.XPATH, "//td[contains(@class, 'calendar__actual')]/span").get_attribute("class")
-                                status = actual_2.get_attribute("class")
-                                status = "Better" if "better" in status else "Worse" if "worse" in status else "N/A"
-                                if status == "N/A" and actual_value >= forecast_elems[i].text:
-                                    status = "Better" 
-                                elif status == "N/A" and actual_value < forecast_elems[i].text:
-                                    status = "Worse"
-                                print(f"Actual: {actual_value}, Status: {status}")
-                                news_zone = currency_elems[i].text
-                                
-                                print('News zone: ', news_zone)
-                                if news_zone == 'GBP':
-                                    currs1 = ['GBPJPY','GBPUSD', 'GBPCAD']
-                                    currs2 = ['EURGBP']
-                                elif news_zone == 'EUR':
-                                    currs1 = ['EURUSD', 'EURGBP', 'EURCAD']
-                                    currs2 = []
-                                elif news_zone == 'USD':
-                                    currs1 = ['USDJPY', 'USDCAD']
-                                    currs2 = ['GBPUSD', 'EURUSD', 'XAUUSD', 'AUDUSD', 'BTCUSD', 'NZDUSD']         
-                                elif news_zone == 'CC':
-                                    currs = ['BTCUSD', 'ETHUSD', 'DOGUSD', 'SOLUSD']
-                                elif news_zone == 'AUD':    
-                                    currs1 = ['AUDCAD', 'AUDCHF', 'AUDJPY', 'AUDNZD', 'AUDUSD']
-                                    currs2 = []
-                                elif news_zone == 'JPY':    
-                                    currs1 = []
-                                    currs2 = ['GBPJPY', 'AUDJPY', 'USDJPY', 'CADJPY']
-                                elif news_zone == 'NZD':    
-                                    currs1 = ['NZDUSD', 'NZDCAD', 'NZDJPY' ]
-                                    currs2 = ['AUDNZD', 'EURNZD', 'GBPNZD']
-                                elif news_zone == 'CHF':    
-                                    currs1 = ['CHFJPY' ]
-                                    currs2 = ['AUDCHF', 'EURCHF', 'GBPCHF']
-                                elif news_zone == 'CAD':    
-                                    currs1 = ['CADJPY' ]
-                                    currs2 = ['GBPCAD', 'EURCAD', 'USDCAD','NZDCAD', 'AUDCAD']
-                                else:
-                                    currs1 = []  
-                                    currs2 = []
+                impact_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__impact')]/span")
+                currency_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__currency')]")
+                event_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__event')]")
+                forecast_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__forecast')]")
+                time_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__time')]")
+                
+                for i in range(len(event_elems)):
+                    try: 
+                        naija_now = datetime.now(tz)
+                        event_time = datetime.strptime(time_elems[i].text, "%I:%M%p").time()
+                        event_time = datetime.combine(naija_now.date(), event_time)
+                        # print("2 time switched to time format successful")
+                        print(f"Done: {event_elems[i].text} ({currency_elems[i].text})")
+                        event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
+                    except:
+                        event_time = 0
+                        event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
+                        pass
+                    
+                    # rows = driver.find_elements(By.XPATH, "//tr[contains(@class, 'calendar__row')]")
+                    # row = rows[i]
+                    # event_time, event_elem, currency_elem, forecast_elem = get_news(i, prev_time_elem, driver)
+                    if event_time > datetime.now(tz) - timedelta(seconds=40):
+                            # remaining_time = (datetime.combine(datetime.today(), event_time) - datetime.now()).total_seconds()
+                        time_to_sleep = (event_time - (datetime.now(tz) + timedelta(seconds=40))).total_seconds()
+                        # time_to_sleep = 2
+                        print('2 Trade On pause till: ', event_time, ' seconds time: ', time_to_sleep-1)        
+                        # sleep(time_to_sleep - 1)
+                        if time_to_sleep > 2:
+                            # break
+                            print(f"2 Waiting for actual value of: {event_elems[i].text} ({currency_elems[i].text})")
+                            time.sleep(time_to_sleep - 1)
+                        wait = WebDriverWait(driver, 30)
+                        # wait.until(lambda driver: driver.find_element(By.TAG_NAME, "span").text.strip() != ""                                            
+                        while actual_checker < 30:
+                        # while False:
+                                try:
+                                    rows = driver.find_elements(By.XPATH, "//tr[contains(@class, 'calendar__row')]")
+                                    row = rows[i]
+                                    actual_1 = wait.until(lambda driver: row.find_element(By.TAG_NAME, "span").text.strip() != "")
+                                    actual_1 = row.find_element(By.XPATH, ".//td[contains(@class, 'calendar__actual')]")
+                                    actual_2 = actual_1.find_element(By.TAG_NAME, "span")
+                                    actual_value = row.find_element(By.XPATH, "//td[contains(@class, 'calendar__actual')]").text
                                     
-                                
-                                if status == 'Better':
-                                    for curr in currs1:
+                                    print('here1')
+                                    # time.sleep(0.1)
+                                    # actual_checker = actual_checker+1
+                                    if actual_value not in ["", "-"]:
+                                        print('here2')
+                                        # span_class = row.find_element(By.XPATH, "//td[contains(@class, 'calendar__actual')]/span").get_attribute("class")
+                                        status = actual_2.get_attribute("class")
+                                        status = "Better" if "better" in status else "Worse" if "worse" in status else "N/A"
+                                        if status == "N/A" and actual_value >= forecast_elems[i].text:
+                                            status = "Better" 
+                                        elif status == "N/A" and actual_value < forecast_elems[i].text:
+                                            status = "Worse"
+                                        print(f"Actual: {actual_value}, Status: {status}")
+                                        news_zone = currency_elems[i].text
                                         
-                                        open_trade(curr, "Buy", 1.0, 123)
-                                    for curr in currs2: 
-                                        open_trade(curr, "Sell", 1.0, 123)
-                                    
-                                elif status == 'Worse':
-                                    for curr in currs1:
-                                        open_trade(curr, "Sell", 1.0, 123)
-                                    for curr in currs2: 
-                                        open_trade(curr, "Buy", 1.0, 123)
-                                else:
-                                    print('Gray actual')
+                                        print('News zone: ', news_zone)
+                                        if news_zone == 'GBP':
+                                            currs1 = ['GBPJPY','GBPUSD', 'GBPCAD']
+                                            currs2 = ['EURGBP']
+                                        elif news_zone == 'EUR':
+                                            currs1 = ['EURUSD', 'EURGBP', 'EURCAD']
+                                            currs2 = []
+                                        elif news_zone == 'USD':
+                                            currs1 = ['USDJPY', 'USDCAD']
+                                            currs2 = ['GBPUSD', 'EURUSD', 'XAUUSD', 'AUDUSD', 'BTCUSD', 'NZDUSD']         
+                                        elif news_zone == 'CC':
+                                            currs = ['BTCUSD', 'ETHUSD', 'DOGUSD', 'SOLUSD']
+                                        elif news_zone == 'AUD':    
+                                            currs1 = ['AUDCAD', 'AUDCHF', 'AUDJPY', 'AUDNZD', 'AUDUSD']
+                                            currs2 = []
+                                        elif news_zone == 'JPY':    
+                                            currs1 = []
+                                            currs2 = ['GBPJPY', 'AUDJPY', 'USDJPY', 'CADJPY']
+                                        elif news_zone == 'NZD':    
+                                            currs1 = ['NZDUSD', 'NZDCAD', 'NZDJPY' ]
+                                            currs2 = ['AUDNZD', 'EURNZD', 'GBPNZD']
+                                        elif news_zone == 'CHF':    
+                                            currs1 = ['CHFJPY' ]
+                                            currs2 = ['AUDCHF', 'EURCHF', 'GBPCHF']
+                                        elif news_zone == 'CAD':    
+                                            currs1 = ['CADJPY' ]
+                                            currs2 = ['GBPCAD', 'EURCAD', 'USDCAD','NZDCAD', 'AUDCAD']
+                                        else:
+                                            currs1 = []  
+                                            currs2 = []
+                                            
+                                        
+                                        if status == 'Better':
+                                            for curr in currs1:
+                                                
+                                                open_trade(curr, "Buy", 1.0, 123)
+                                            for curr in currs2: 
+                                                open_trade(curr, "Sell", 1.0, 123)
+                                            
+                                        elif status == 'Worse':
+                                            for curr in currs1:
+                                                open_trade(curr, "Sell", 1.0, 123)
+                                            for curr in currs2: 
+                                                open_trade(curr, "Buy", 1.0, 123)
+                                        else:
+                                            print('Gray actual')
+                                        
+                                        actual_checker = 0
+                                        break
+                                    else:
+                                        print("Waiting for actual value...")
+                                        time.sleep(0.5)  # Small delay before retrying
+                                        actual_checker = actual_checker+1
+                                    # print('check 1')
                                 
-                                actual_checker = 0
-                                break
-                            else:
-                                print("Waiting for actual value...")
-                                time.sleep(0.5)  # Small delay before retrying
-                                actual_checker = actual_checker+1
-                            # print('check 1')
-                        
-                        except TimeoutException:
-                            print("Timeout waiting for actual value.")
-                            break  # Exit loop after timeout
-                        except Exception as e:
-                            time.sleep(0.1)
-                            actual_checker = actual_checker+1
-    
-                            print(f"Error retrieving rows: {e}")
-    
-                            print('check 4: error in actual checker')
-                            driver.quit()
-                            driver = webdriver.Chrome() # options=options)
-                            
-                            # open new FF
-                            driver.get("https://www.forexfactory.com/calendar?day=today")
-                            rows = driver.find_elements(By.XPATH, "//tr[contains(@class, 'calendar__row')]")
+                                except TimeoutException:
+                                    print("Timeout waiting for actual value.")
+                                    break  # Exit loop after timeout
+                                except Exception as e:
+                                    time.sleep(0.1)
+                                    actual_checker = actual_checker+1
+            
+                                    print(f"Error retrieving rows: {e}")
+            
+                                    print('check 4: error in actual checker')
+                                    driver.quit()
+                                    driver = webdriver.Chrome() # options=options)
+                                    
+                                    # open new FF
+                                    driver.get("https://www.forexfactory.com/calendar?day=today")
+                                    rows = driver.find_elements(By.XPATH, "//tr[contains(@class, 'calendar__row')]")
 
     except Exception as e:
         print(f"Error retrieving rows: {e}")
