@@ -122,8 +122,8 @@ while True:
                 print('time to wait: ', (event_time - (datetime.now(tz) + timedelta(minutes=1))).total_seconds(), ' seconds')
                 print(f"1. Waiting for actual value of: {event_elems[i].text} ({currency_elems[i].text})")
                 try:
-                    # time.sleep((event_time - (datetime.now(tz) + timedelta(minutes=0.5))).total_seconds())
-                    time.sleep(30)
+                    time.sleep((event_time - (datetime.now(tz) + timedelta(minutes=0.7))).total_seconds())
+                    # time.sleep(30)
                 except:
                     pass
                 # Navigate to Forex Factory Calendar
