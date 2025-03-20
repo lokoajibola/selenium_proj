@@ -102,12 +102,15 @@ while True:
         forecast_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__forecast')]")
         time_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__time')]")
         for i in range(len(event_elems)):
+            print('')
+            print('Row ', i , '/', len(event_elems))
+            # print('')
             try: 
                 naija_now = datetime.now(tz)
                 event_time = datetime.strptime(time_elems[i].text, "%I:%M%p").time()
                 event_time = datetime.combine(naija_now.date(), event_time)
                 # print("2 time switched to time format successful")
-                print(f"Done: {event_elems[i].text} ({currency_elems[i].text})")
+                
                 event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
             except:
                 # event_time = 0
@@ -141,128 +144,171 @@ while True:
                 forecast_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__forecast')]")
                 time_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__time')]")
                 
-                for j in range(i+1):
-                    try: 
-                        naija_now = datetime.now(tz)
-                        event_time = datetime.strptime(time_elems[j].text, "%I:%M%p").time()
-                        event_time = datetime.combine(naija_now.date(), event_time)
-                        # print("2 time switched to time format successful")
-                        print(f"Done: {event_elems[j].text} ({currency_elems[j].text})")
-                        event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
-                    except:
-                        # event_time = 0
-                        # event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
-                        pass
+            # for j in range(i+1):
+                j = i
+                try: 
+                    naija_now = datetime.now(tz)
+                    event_time = event_time if time_elems[j].text == "" else datetime.strptime(time_elems[j].text, "%I:%M%p").time()
+                    event_time = datetime.combine(naija_now.date(), event_time)
+                    # print("2 time switched to time format successful")
+                    print(f"Done: {event_elems[j].text} ({currency_elems[j].text})")
+                    event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
+                except:
+                    # event_time = 0
+                    # event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
+                    pass
+                
+                # rows = driver.find_elements(By.XPATH, "//tr[contains(@class, 'calendar__row')]")
+                # row = rows[i]
+                # event_time, event_elem, currency_elem, forecast_elem = get_news(i, prev_time_elem, driver)
+                if  event_time > datetime.now(tz) - timedelta(minutes=5):
+                    print(f"NEWS TIME  FOR: {event_elems[j].text} ({currency_elems[j].text})")
                     
-                    # rows = driver.find_elements(By.XPATH, "//tr[contains(@class, 'calendar__row')]")
-                    # row = rows[i]
-                    # event_time, event_elem, currency_elem, forecast_elem = get_news(i, prev_time_elem, driver)
-                    if  event_time > datetime.now(tz) - timedelta(minutes=0.5):
-                        print(f"NEWS TIME  FOR: {event_elems[j].text} ({currency_elems[j].text})")
+                    try:
+                        # Wait until the <span> inside the .calendar__actual cell appears
+                        WebDriverWait(driver, 200).until(
+                            EC.presence_of_element_located((By.XPATH, f"(//td[contains(@class, 'calendar__actual')])[{j+1}]/span"))
+                        )
                         
-                        try:
-                            # Wait until the <span> inside the .calendar__actual cell appears
-                            WebDriverWait(driver, 120).until(
-                                EC.presence_of_element_located((By.XPATH, f"(//td[contains(@class, 'calendar__actual')])[{j}]/span"))
-                            )
-                            
-                            # Extract row text
-                            row_text = driver.execute_script(
-                                f"return document.querySelectorAll('.calendar__actual')[{j-1}].innerText;"
-                            )
-                            
-                            # Extract span text and class
-                            span_data = driver.execute_script(
-                                f"""
-                                let elem = document.querySelectorAll('.calendar__actual')[{j-1}].querySelector('span');
-                                return elem ? {{ text: elem.innerText, class: elem.className }} : {{ text: null, class: null }};
-                                """
-                            )
-                            
-                            actual_value = span_data["text"]
-                            status = span_data["class"]
-                            
-                            print(f"Row {j} detected - Text: {row_text}, Span Text: {actual_value}, Span Class: {status}")
-    
-                            
-                            print(f"Actual: {actual_value}, Status: {status}")
-                            news_zone = currency_elems[j].text
-                            
-                            print('News zone: ', news_zone)
-                            if news_zone == 'GBP':
-                                currs1 = ['GBPJPY','GBPUSD', 'GBPCAD']
-                                currs2 = ['EURGBP']
-                            elif news_zone == 'EUR':
-                                currs1 = ['EURUSD', 'EURGBP', 'EURCAD']
-                                currs2 = []
-                            elif news_zone == 'USD':
-                                currs1 = ['USDJPY', 'USDCAD']
-                                currs2 = ['GBPUSD', 'EURUSD', 'XAUUSD', 'AUDUSD', 'BTCUSD', 'NZDUSD']         
-                            elif news_zone == 'CC':
-                                currs = ['BTCUSD', 'ETHUSD', 'DOGUSD', 'SOLUSD']
-                            elif news_zone == 'AUD':    
-                                currs1 = ['AUDCAD', 'AUDCHF', 'AUDJPY', 'AUDNZD', 'AUDUSD']
-                                currs2 = []
-                            elif news_zone == 'JPY':    
-                                currs1 = []
-                                currs2 = ['GBPJPY', 'AUDJPY', 'USDJPY', 'CADJPY']
-                            elif news_zone == 'NZD':    
-                                currs1 = ['NZDUSD', 'NZDCAD', 'NZDJPY' ]
-                                currs2 = ['AUDNZD', 'EURNZD', 'GBPNZD']
-                            elif news_zone == 'CHF':    
-                                currs1 = ['CHFJPY' ]
-                                currs2 = ['AUDCHF', 'EURCHF', 'GBPCHF']
-                            elif news_zone == 'CAD':    
-                                currs1 = ['CADJPY' ]
-                                currs2 = ['GBPCAD', 'EURCAD', 'USDCAD','NZDCAD', 'AUDCAD']
-                            else:
-                                currs1 = []  
-                                currs2 = []
-                                
-                            
-                            if status == 'Better':
-                                for curr in currs1:
-                                    
-                                    open_trade(curr, "Buy", 1.0, 123)
-                                for curr in currs2: 
-                                    open_trade(curr, "Sell", 1.0, 123)
-                                
-                            elif status == 'Worse':
-                                for curr in currs1:
-                                    open_trade(curr, "Sell", 1.0, 123)
-                                for curr in currs2: 
-                                    open_trade(curr, "Buy", 1.0, 123)
-                            else:
-                                print('Gray actual')
-                            
-                            actual_checker = 0
-                            break
+                        # Extract row text
+                        row_text = driver.execute_script(
+                            f"return document.querySelectorAll('.calendar__actual')[{j+1}].innerText;"
+                        )
                         
-                    
-                        except TimeoutException:
-                            print("Timeout waiting for actual value.")
-                            driver.quit()
-                            driver = webdriver.Chrome() # options=options)
-                            
-                            # open new FF
-                            driver.get("https://www.forexfactory.com/calendar?day=today")
-                            
-                            break  # Exit loop after timeout
-                        except Exception as e:
-                            time.sleep(0.1)
-                            # actual_checker = actual_checker+1
-        
-                            print(f"Error retrieving rows: {e}")
-        
-                            print('check 4: error in actual checker')
-                            driver.quit()
-                            driver = webdriver.Chrome() # options=options)
-                            
-                            # open new FF
-                            driver.get("https://www.forexfactory.com/calendar?day=today")
-                            break
-                            # rows = driver.find_elements(By.XPATH, "//tr[contains(@class, 'calendar__row')]")
+                        # Extract span text and class
+                        span_data = driver.execute_script(
+                            f"""
+                            let elem = document.querySelectorAll('.calendar__actual')[{j+1}].querySelector('span');
+                            return elem ? {{ text: elem.innerText, class: elem.className }} : {{ text: null, class: null }};
+                            """
+                        )
+                        
+                        actual_value = span_data["text"]
+                        status = span_data["class"]
+                        
+                        print(f"Row {j} detected - Text: {row_text}, Span Text: {actual_value}, Span Class: {status}")
 
+                        
+                        print(f"Actual: {actual_value}, Status: {status}")
+                        news_zone = currency_elems[j].text
+                        
+                        print('News zone: ', news_zone)
+                        if news_zone == 'GBP':
+                            currs1 = ['GBPJPY','GBPUSD', 'GBPCAD']
+                            currs2 = ['EURGBP']
+                        elif news_zone == 'EUR':
+                            currs1 = ['EURUSD', 'EURGBP', 'EURCAD']
+                            currs2 = []
+                        elif news_zone == 'USD':
+                            currs1 = ['USDJPY', 'USDCAD']
+                            currs2 = ['GBPUSD', 'EURUSD', 'XAUUSD', 'AUDUSD', 'BTCUSD', 'NZDUSD']         
+                        elif news_zone == 'CC':
+                            currs = ['BTCUSD', 'ETHUSD', 'DOGUSD', 'SOLUSD']
+                        elif news_zone == 'AUD':    
+                            currs1 = ['AUDCAD', 'AUDCHF', 'AUDJPY', 'AUDNZD', 'AUDUSD']
+                            currs2 = []
+                        elif news_zone == 'JPY':    
+                            currs1 = []
+                            currs2 = ['GBPJPY', 'AUDJPY', 'USDJPY', 'CADJPY']
+                        elif news_zone == 'NZD':    
+                            currs1 = ['NZDUSD', 'NZDCAD', 'NZDJPY' ]
+                            currs2 = ['AUDNZD', 'EURNZD', 'GBPNZD']
+                        elif news_zone == 'CHF':    
+                            currs1 = ['CHFJPY' ]
+                            currs2 = ['AUDCHF', 'EURCHF', 'GBPCHF']
+                        elif news_zone == 'CAD':    
+                            currs1 = ['CADJPY' ]
+                            currs2 = ['GBPCAD', 'EURCAD', 'USDCAD','NZDCAD', 'AUDCAD']
+                        else:
+                            currs1 = []  
+                            currs2 = []
+                            
+                        
+                        if status == 'better':
+                            for curr in currs1:
+                                
+                                open_trade(curr, "Buy", 1.0, 123)
+                            for curr in currs2: 
+                                open_trade(curr, "Sell", 1.0, 123)
+                            
+                        elif status == 'worse':
+                            for curr in currs1:
+                                open_trade(curr, "Sell", 1.0, 123)
+                            for curr in currs2: 
+                                open_trade(curr, "Buy", 1.0, 123)
+                        else:
+                            print('Gray actual')
+                        
+                        # actual_checker = 0
+                        break
+                    
+                
+                    except TimeoutException:
+                        print("Timeout waiting for actual value.")
+                        driver.quit()
+                        driver = webdriver.Chrome() # options=options)
+                        
+                        # open new FF
+                        driver.get("https://www.forexfactory.com/calendar?day=today")
+                        pass
+                        # break  # Exit loop after timeout
+                    except Exception as e:
+                        time.sleep(0.1)
+                        # actual_checker = actual_checker+1
+    
+                        print(f"Error retrieving rows: {e}")
+    
+                        print('check 4: error in actual checker')
+                        driver.quit()
+                        driver = webdriver.Chrome() # options=options)
+                        
+                        # open new FF
+                        driver.get("https://www.forexfactory.com/calendar?day=today")
+                        pass
+                        # break
+                        # rows = driver.find_elements(By.XPATH, "//tr[contains(@class, 'calendar__row')]")
+            else:
+                print(f"Done: {event_elems[i].text} ({currency_elems[i].text})")
+                try:
+                    # Wait until the <span> inside the .calendar__actual cell appears
+                    WebDriverWait(driver, 200).until(
+                        EC.presence_of_element_located((By.XPATH, f"(//td[contains(@class, 'calendar__actual')])[{i+1}]/span"))
+                    )
+                    
+                    # Extract row text
+                    row_text = driver.execute_script(
+                        f"return document.querySelectorAll('.calendar__actual')[{i+1}].innerText;"
+                    )
+                    
+                    # Extract span text and class
+                    span_data = driver.execute_script(
+                        f"""
+                        let elem = document.querySelectorAll('.calendar__actual')[{i+1}].querySelector('span');
+                        return elem ? {{ text: elem.innerText, class: elem.className }} : {{ text: null, class: null }};
+                        """
+                    )
+                    
+                    actual_value = span_data["text"]
+                    status = span_data["class"]
+                    
+                    print(f"Row {i} detected - Text: {row_text}, Span Text: {actual_value}, Span Class: {status}")
+
+                    
+                    print(f"Actual: {actual_value}, Status: {status}")
+                except:
+                    pass
+        
+        event_time = datetime.strptime("10:59pm", "%I:%M%p").time()
+        event_time = datetime.combine(naija_now.date(), event_time)
+        event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
+        
+        time.sleep((event_time - (datetime.now(tz) - timedelta(minutes=10))).total_seconds())
+        driver.quit()
+        driver = webdriver.Chrome() # options=options)
+        
+        # open new FF
+        driver.get("https://www.forexfactory.com/calendar?day=today")
+        time.sleep(5)
     except Exception as e:
         print(f"Error retrieving rows: {e}")
         print('check 1: error in getting the rows of calendar 1')
