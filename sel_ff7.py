@@ -57,7 +57,7 @@ if not mt5.initialize():
     print("initialize() failed, error code =",mt5.last_error())
     mt5.shutdown()
 
-def open_trade(symbol, trade_type, volume, magic):
+def open_trade(symbol, trade_type, volume, comment):
     trade_action = mt5.ORDER_TYPE_BUY if trade_type == "Buy" else mt5.ORDER_TYPE_SELL
     price = mt5.symbol_info_tick(symbol).ask if trade_type == "Buy" else mt5.symbol_info_tick(symbol).bid
     point = mt5.symbol_info(symbol).point
@@ -70,8 +70,8 @@ def open_trade(symbol, trade_type, volume, magic):
         "deviation": 10,
         "sl": price - (50 * point) if trade_type == "Buy" else price + (50 * point),
         "tp": price - (50 * point) if trade_type == "Sell" else price + (50 * point),
-        "magic": magic,
-        "comment": "Synchronized trade",
+        "magic": 123,
+        "comment": comment,
         "type_time": mt5.ORDER_TIME_GTC,
         "type_filling": mt5.ORDER_FILLING_IOC,
     }
@@ -79,7 +79,7 @@ def open_trade(symbol, trade_type, volume, magic):
     if result.retcode != mt5.TRADE_RETCODE_DONE:
         print(f"Failed to open trade for {symbol}: {result.retcode}")
     else:
-        print(f"Opened trade: {symbol}, {volume} lots, {'Buy' if trade_type == 'mt5.ORDER_TYPE_BUY' else 'Sell'}")
+        print(f"Opened trade: {symbol}, {volume} lots, {'Buy' if trade_type == mt5.ORDER_TYPE_BUY else 'Sell'}")
 
 
 # 2. Initialize Selenium WebDriver
@@ -151,8 +151,9 @@ while True:
                     event_time = event_time if time_elems[j].text == "" else datetime.strptime(time_elems[j].text, "%I:%M%p").time()
                     event_time = datetime.combine(naija_now.date(), event_time)
                     # print("2 time switched to time format successful")
-                    print(f"Done: {event_elems[j].text} ({currency_elems[j].text})")
+                    # print(f"Done: {event_elems[j].text} ({currency_elems[j].text})")
                     event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
+                    # impact_ele = impact_elems[j].get_attribute("title")
                 except:
                     # event_time = 0
                     # event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
@@ -161,6 +162,7 @@ while True:
                 # rows = driver.find_elements(By.XPATH, "//tr[contains(@class, 'calendar__row')]")
                 # row = rows[i]
                 # event_time, event_elem, currency_elem, forecast_elem = get_news(i, prev_time_elem, driver)
+                impact_ele = impact_elems[j].get_attribute("title")
                 if  event_time > datetime.now(tz) - timedelta(minutes=5):
                     print(f"NEWS TIME  FOR: {event_elems[j].text} ({currency_elems[j].text})")
                     
@@ -223,24 +225,24 @@ while True:
                             currs1 = []  
                             currs2 = []
                             
-                        
+                        commm = impact_ele[0] + ' ' + event_elems[i].text
                         if status == 'better':
                             for curr in currs1:
                                 
-                                open_trade(curr, "Buy", 1.0, 123)
+                                open_trade(curr, "Buy", 1.0, commm)
                             for curr in currs2: 
-                                open_trade(curr, "Sell", 1.0, 123)
+                                open_trade(curr, "Sell", 1.0, commm)
                             
                         elif status == 'worse':
                             for curr in currs1:
-                                open_trade(curr, "Sell", 1.0, 123)
+                                open_trade(curr, "Sell", 1.0, commm)
                             for curr in currs2: 
-                                open_trade(curr, "Buy", 1.0, 123)
+                                open_trade(curr, "Buy", 1.0, commm)
                         else:
                             print('Gray actual')
                         
                         # actual_checker = 0
-                        break
+                        # break
                     
                 
                     except TimeoutException:
@@ -268,10 +270,10 @@ while True:
                         # break
                         # rows = driver.find_elements(By.XPATH, "//tr[contains(@class, 'calendar__row')]")
             else:
-                print(f"Done: {event_elems[i].text} ({currency_elems[i].text})")
+                print(f"Done: {event_elems[i].text} ({currency_elems[i].text}) - {impact_elems[i].get_attribute("title")}")
                 try:
                     # Wait until the <span> inside the .calendar__actual cell appears
-                    WebDriverWait(driver, 200).until(
+                    WebDriverWait(driver, 2).until(
                         EC.presence_of_element_located((By.XPATH, f"(//td[contains(@class, 'calendar__actual')])[{i+1}]/span"))
                     )
                     
@@ -297,18 +299,25 @@ while True:
                     print(f"Actual: {actual_value}, Status: {status}")
                 except:
                     pass
+        # Get the current datetime in Casablanca
+        nnow = datetime.now(tz)
         
-        event_time = datetime.strptime("10:59pm", "%I:%M%p").time()
-        event_time = datetime.combine(naija_now.date(), event_time)
-        event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
-        
-        time.sleep((event_time - (datetime.now(tz) - timedelta(minutes=10))).total_seconds())
-        driver.quit()
-        driver = webdriver.Chrome() # options=options)
-        
-        # open new FF
-        driver.get("https://www.forexfactory.com/calendar?day=today")
-        time.sleep(5)
+        # Define 11:59 PM on the same day
+        target_time = nnow.replace(hour=23, minute=59, second=59, microsecond=0)
+        if nnow < target_time:
+            
+            
+            # Calculate the time difference in seconds
+            seconds_to_wait = (target_time - nnow).total_seconds()
+            print('NO MORE NEWS! ON SLEEP TILL 12 MIDNIGHT!')
+            time.sleep(seconds_to_wait+10)
+            
+            driver.quit()
+            driver = webdriver.Chrome() # options=options)
+            
+            # open new FF
+            driver.get("https://www.forexfactory.com/calendar?day=today")
+            time.sleep(5)
     except Exception as e:
         print(f"Error retrieving rows: {e}")
         print('check 1: error in getting the rows of calendar 1')
