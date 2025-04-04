@@ -68,8 +68,10 @@ def open_trade(symbol, trade_type, volume, comment):
         "type": trade_action,
         "price": price,
         "deviation": 10,
-        "sl": price - (50 * point) if trade_type == "Buy" else price + (50 * point),
-        "tp": price - (50 * point) if trade_type == "Sell" else price + (50 * point),
+        "sl": price * 0.999 if trade_type == "Buy" else price * 1.001, # 0.1%
+        # "tp": price * 1.0005 if trade_type == "Buy" else price * 0.9995, # 0.05%
+        # "sl": price - (100 * point) if trade_type == "Buy" else price + (100 * point),
+        "tp": price - (20 * point) if trade_type == "Sell" else price + (20 * point),
         "magic": 123,
         "comment": comment,
         "type_time": mt5.ORDER_TIME_GTC,
@@ -79,7 +81,7 @@ def open_trade(symbol, trade_type, volume, comment):
     if result.retcode != mt5.TRADE_RETCODE_DONE:
         print(f"Failed to open trade for {symbol}: {result.retcode}")
     else:
-        print(f"Opened trade: {symbol}, {volume} lots, {'Buy' if trade_type == mt5.ORDER_TYPE_BUY else 'Sell'}")
+        print(f"Opened trade: {symbol}, {volume} lots, {'Buy' if trade_type == 'Buy' else 'Sell'}")
 
 
 # 2. Initialize Selenium WebDriver
@@ -90,9 +92,15 @@ driver = webdriver.Chrome() # options=options)
 driver.get("https://www.forexfactory.com/calendar?day=today")
 time.sleep(5)  # Allow page to load
 
-prev_time_elem = '12:00am'
+prev_time_elem = '12:01am'
 tz = pytz.timezone("Africa/Casablanca")
 naija_now = datetime.now(tz)
+
+# INITIATE EVENT TIME TO AVOID LOOP ERROR WHEN THE DAY STARTS WITH A BAD EVENT TIME
+event_time = datetime.strptime(prev_time_elem, "%I:%M%p").time()
+event_time = datetime.combine(naija_now.date(), event_time)
+event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
+prev_event_time = event_time
 
 while True:
     try:
@@ -112,8 +120,9 @@ while True:
                 # print("2 time switched to time format successful")
                 
                 event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
+                prev_event_time = event_time
             except:
-                # event_time = 0
+                event_time = prev_event_time
                 # event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
                 pass
 
@@ -196,19 +205,19 @@ while True:
                         
                         print('News zone: ', news_zone)
                         if news_zone == 'GBP':
-                            currs1 = ['GBPJPY','GBPUSD', 'GBPCAD']
+                            currs1 = ['GBPJPY','GBPUSD', 'GBPCAD', 'GBPAUD', 'GBPNZD']
                             currs2 = ['EURGBP']
                         elif news_zone == 'EUR':
-                            currs1 = ['EURUSD', 'EURGBP', 'EURCAD']
+                            currs1 = ['EURUSD', 'EURGBP', 'EURCAD', 'EURJPY', 'EURAUD', 'EURCHF']
                             currs2 = []
                         elif news_zone == 'USD':
-                            currs1 = ['USDJPY', 'USDCAD']
+                            currs1 = ['USDJPY', 'USDCAD', 'USDCHF']
                             currs2 = ['GBPUSD', 'EURUSD', 'XAUUSD', 'AUDUSD', 'BTCUSD', 'NZDUSD']         
                         elif news_zone == 'CC':
                             currs = ['BTCUSD', 'ETHUSD', 'DOGUSD', 'SOLUSD']
                         elif news_zone == 'AUD':    
                             currs1 = ['AUDCAD', 'AUDCHF', 'AUDJPY', 'AUDNZD', 'AUDUSD']
-                            currs2 = []
+                            currs2 = ['GBPAUD', 'EURAUD',]
                         elif news_zone == 'JPY':    
                             currs1 = []
                             currs2 = ['GBPJPY', 'AUDJPY', 'USDJPY', 'CADJPY']
@@ -217,7 +226,7 @@ while True:
                             currs2 = ['AUDNZD', 'EURNZD', 'GBPNZD']
                         elif news_zone == 'CHF':    
                             currs1 = ['CHFJPY' ]
-                            currs2 = ['AUDCHF', 'EURCHF', 'GBPCHF']
+                            currs2 = ['AUDCHF', 'EURCHF', 'GBPCHF', 'USDCHF']
                         elif news_zone == 'CAD':    
                             currs1 = ['CADJPY' ]
                             currs2 = ['GBPCAD', 'EURCAD', 'USDCAD','NZDCAD', 'AUDCAD']
@@ -226,6 +235,7 @@ while True:
                             currs2 = []
                             
                         commm = impact_ele[0] + ' ' + event_elems[i].text
+                        # if impact_ele[0] == 'H' and 'Farm' in  event_elems[i].text:
                         if status == 'better':
                             for curr in currs1:
                                 
