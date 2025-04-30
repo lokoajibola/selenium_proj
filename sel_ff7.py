@@ -71,17 +71,21 @@ def open_trade(symbol, trade_type, volume, comment):
         "sl": price * 0.999 if trade_type == "Buy" else price * 1.001, # 0.1%
         # "tp": price * 1.0005 if trade_type == "Buy" else price * 0.9995, # 0.05%
         # "sl": price - (100 * point) if trade_type == "Buy" else price + (100 * point),
-        "tp": price - (20 * point) if trade_type == "Sell" else price + (20 * point),
+        "tp": price - (40 * point) if trade_type == "Sell" else price + (40 * point),
         "magic": 123,
         "comment": comment,
         "type_time": mt5.ORDER_TIME_GTC,
         "type_filling": mt5.ORDER_FILLING_IOC,
     }
-    result = mt5.order_send(request)
-    if result.retcode != mt5.TRADE_RETCODE_DONE:
-        print(f"Failed to open trade for {symbol}: {result.retcode}")
-    else:
+    try:
+        result = mt5.order_send(request)
+        
         print(f"Opened trade: {symbol}, {volume} lots, {'Buy' if trade_type == 'Buy' else 'Sell'}")
+    except:
+        if result.retcode != mt5.TRADE_RETCODE_DONE:
+            print(f"Failed to open trade for {symbol}: {result.retcode}")
+        pass
+        
 
 
 # 2. Initialize Selenium WebDriver
@@ -235,21 +239,37 @@ while True:
                             currs2 = []
                             
                         commm = impact_ele[0] + ' ' + event_elems[i].text
-                        # if impact_ele[0] == 'H' and 'Farm' in  event_elems[i].text:
-                        if status == 'better':
-                            for curr in currs1:
+                        if impact_ele[0] == 'H' or impact_ele[0] == 'M': #and 'Farm' in  event_elems[i].text:
+                            if status == 'better': #'better':
+                                for curr in currs1:
+                                    
+                                    open_trade(curr, "Sell", 1.0, commm)
+                                for curr in currs2: 
+                                    open_trade(curr, "Buy", 1.0, commm)
                                 
-                                open_trade(curr, "Buy", 1.0, commm)
-                            for curr in currs2: 
-                                open_trade(curr, "Sell", 1.0, commm)
+                            elif status == 'worse':#'worse':
+                                for curr in currs1:
+                                    open_trade(curr, "Buy", 1.0, commm)
+                                for curr in currs2: 
+                                    open_trade(curr, "Sell", 1.0, commm)
+                            else:
+                                print('Gray actual')
                             
-                        elif status == 'worse':
-                            for curr in currs1:
-                                open_trade(curr, "Sell", 1.0, commm)
-                            for curr in currs2: 
-                                open_trade(curr, "Buy", 1.0, commm)
                         else:
-                            print('Gray actual')
+                            if status == 'worse': #'better':
+                                for curr in currs1:
+                                    
+                                    open_trade(curr, "Sell", 1.0, commm)
+                                for curr in currs2: 
+                                    open_trade(curr, "Buy", 1.0, commm)
+                                
+                            elif status == 'better':#'worse':
+                                for curr in currs1:
+                                    open_trade(curr, "Buy", 1.0, commm)
+                                for curr in currs2: 
+                                    open_trade(curr, "Sell", 1.0, commm)
+                            else:
+                                print('Gray actual')
                         
                         # actual_checker = 0
                         # break
@@ -262,6 +282,7 @@ while True:
                         
                         # open new FF
                         driver.get("https://www.forexfactory.com/calendar?day=today")
+                        time.sleep(5)
                         pass
                         # break  # Exit loop after timeout
                     except Exception as e:
@@ -276,6 +297,7 @@ while True:
                         
                         # open new FF
                         driver.get("https://www.forexfactory.com/calendar?day=today")
+                        time.sleep(5)
                         pass
                         # break
                         # rows = driver.find_elements(By.XPATH, "//tr[contains(@class, 'calendar__row')]")
