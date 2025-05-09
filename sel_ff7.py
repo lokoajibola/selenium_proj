@@ -14,7 +14,7 @@ Created on Mon Feb 10 12:00:01 2025
 
 # IMPORT LIBRARIES
 import time
-import pandas as pd
+# import pandas as pd
 from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -24,12 +24,12 @@ from selenium.webdriver.support import expected_conditions as EC
 
 
 import MetaTrader5 as mt5
-import numpy as np
+# import numpy as np
 # import datetime
-import pandas as pd
+# import pandas as pd
 import pytz
-import pandas_ta as ta
-from time import sleep
+# import pandas_ta as ta
+# from time import sleep
 
 
 actual_checker = 0
@@ -57,10 +57,11 @@ if not mt5.initialize():
     print("initialize() failed, error code =",mt5.last_error())
     mt5.shutdown()
 
-def open_trade(symbol, trade_type, volume, comment):
+def open_trade(symbol, trade_type, volume, comment, impact):
     trade_action = mt5.ORDER_TYPE_BUY if trade_type == "Buy" else mt5.ORDER_TYPE_SELL
     price = mt5.symbol_info_tick(symbol).ask if trade_type == "Buy" else mt5.symbol_info_tick(symbol).bid
     point = mt5.symbol_info(symbol).point
+    sl_val = 80 if impact == 'L' else 120
     request = {
         "action": mt5.TRADE_ACTION_DEAL,
         "symbol": symbol,
@@ -68,9 +69,11 @@ def open_trade(symbol, trade_type, volume, comment):
         "type": trade_action,
         "price": price,
         "deviation": 10,
-        "sl": price * 0.999 if trade_type == "Buy" else price * 1.001, # 0.1%
+              
         # "tp": price * 1.0005 if trade_type == "Buy" else price * 0.9995, # 0.05%
-        # "sl": price - (100 * point) if trade_type == "Buy" else price + (100 * point),
+        "sl": price - (sl_val * point) if trade_type == "Buy" else price + (sl_val * point),
+        # "sl": price * 0.999 if trade_type == "Buy" else price * 1.001, # 0.1%
+            
         "tp": price - (40 * point) if trade_type == "Sell" else price + (40 * point),
         "magic": 123,
         "comment": comment,
@@ -79,8 +82,10 @@ def open_trade(symbol, trade_type, volume, comment):
     }
     try:
         result = mt5.order_send(request)
-        
-        print(f"Opened trade: {symbol}, {volume} lots, {'Buy' if trade_type == 'Buy' else 'Sell'}")
+        if result.retcode != mt5.TRADE_RETCODE_DONE:
+            print(f"Failed to open trade for {symbol}: {result.retcode}")
+        else:
+            print(f"Opened trade: {symbol}, {volume} lots, {'Buy' if trade_type == 'Buy' else 'Sell'}")
     except:
         if result.retcode != mt5.TRADE_RETCODE_DONE:
             print(f"Failed to open trade for {symbol}: {result.retcode}")
@@ -90,11 +95,10 @@ def open_trade(symbol, trade_type, volume, comment):
 
 # 2. Initialize Selenium WebDriver
 driver = webdriver.Chrome() # options=options)
-
-
 # Navigate to Forex Factory Calendar
 driver.get("https://www.forexfactory.com/calendar?day=today")
-time.sleep(5)  # Allow page to load
+# time.sleep(5)  # Allow page to load
+WebDriverWait(driver, 10).until(lambda d: d.execute_script("return document.readyState") == "complete")
 
 prev_time_elem = '12:01am'
 tz = pytz.timezone("Africa/Casablanca")
@@ -106,11 +110,29 @@ event_time = datetime.combine(naija_now.date(), event_time)
 event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
 prev_event_time = event_time
 
+attempt = 1
+page_loaded = False
+
 while True:
     try:
+        event_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__event')]")
+        if len(event_elems) < 1: 
+            while attempt <= 5 and not page_loaded:
+                try:
+                    driver.quit()
+                    driver = webdriver.Chrome() # options=options)
+                    driver.get("https://www.forexfactory.com/calendar?day=today") 
+                    WebDriverWait(driver, 10).until(lambda d: d.execute_script("return document.readyState") == "complete") 
+                    page_loaded = True
+                    attempt = 1
+                except Exception as e:
+                    print(f"Page not fully loaded yet (Attempt {attempt}/5). Error: {e}")
+                    attempt += 1
+                    time.sleep(5)
+                    continue
+            event_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__event')]")
         impact_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__impact')]/span")
         currency_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__currency')]")
-        event_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__event')]")
         forecast_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__forecast')]")
         time_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__time')]")
         for i in range(len(event_elems)):
@@ -127,8 +149,10 @@ while True:
                 prev_event_time = event_time
             except:
                 event_time = prev_event_time
+                print('E1')
                 # event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
                 pass
+                # continue
 
             # event_time, event_elem, currency_elem, forecast_elem = get_news(i, prev_time_elem, driver)
             
@@ -141,6 +165,7 @@ while True:
                     time.sleep((event_time - (datetime.now(tz) + timedelta(minutes=0.7))).total_seconds())
                     # time.sleep(30)
                 except:
+                    print('E2')
                     pass
                 # Navigate to Forex Factory Calendar
                 driver.quit()
@@ -150,10 +175,24 @@ while True:
                 driver.get("https://www.forexfactory.com/calendar?day=today")
                 time.sleep(5)  # Allow page to load
                             
-                        
+                event_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__event')]")
+                if len(event_elems) < 1: 
+                    while attempt <= 5 and not page_loaded:
+                        try:
+                            driver.quit()
+                            driver = webdriver.Chrome() # options=options)
+                            driver.get("https://www.forexfactory.com/calendar?day=today") 
+                            WebDriverWait(driver, 10).until(lambda d: d.execute_script("return document.readyState") == "complete") 
+                            page_loaded = True
+                            attempt = 1
+                        except Exception as e:
+                            print(f"Page not fully loaded yet (Attempt {attempt}/5). Error: {e}")
+                            attempt += 1
+                            time.sleep(5)
+                            continue
+                    event_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__event')]")
                 impact_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__impact')]/span")
                 currency_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__currency')]")
-                event_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__event')]")
                 forecast_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__forecast')]")
                 time_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__time')]")
                 
@@ -168,6 +207,7 @@ while True:
                     event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
                     # impact_ele = impact_elems[j].get_attribute("title")
                 except:
+                    print('E3')
                     # event_time = 0
                     # event_time = tz.localize(datetime.combine(datetime.today(), event_time.time()))
                     pass
@@ -176,7 +216,7 @@ while True:
                 # row = rows[i]
                 # event_time, event_elem, currency_elem, forecast_elem = get_news(i, prev_time_elem, driver)
                 impact_ele = impact_elems[j].get_attribute("title")
-                if  event_time > datetime.now(tz) - timedelta(minutes=5):
+                if  event_time > datetime.now(tz) - timedelta(minutes=8):
                     print(f"NEWS TIME  FOR: {event_elems[j].text} ({currency_elems[j].text})")
                     
                     try:
@@ -240,34 +280,37 @@ while True:
                             
                         commm = impact_ele[0] + ' ' + event_elems[i].text
                         if impact_ele[0] == 'H' or impact_ele[0] == 'M': #and 'Farm' in  event_elems[i].text:
+                            time.sleep(30)
                             if status == 'better': #'better':
+                                
                                 for curr in currs1:
                                     
-                                    open_trade(curr, "Sell", 1.0, commm)
+                                    open_trade(curr, "Sell", 1.0, commm, impact_ele[0])
                                 for curr in currs2: 
-                                    open_trade(curr, "Buy", 1.0, commm)
+                                    open_trade(curr, "Buy", 1.0, commm, impact_ele[0])
                                 
                             elif status == 'worse':#'worse':
                                 for curr in currs1:
-                                    open_trade(curr, "Buy", 1.0, commm)
+                                    open_trade(curr, "Buy", 1.0, commm, impact_ele[0])
                                 for curr in currs2: 
-                                    open_trade(curr, "Sell", 1.0, commm)
+                                    open_trade(curr, "Sell", 1.0, commm, impact_ele[0])
                             else:
                                 print('Gray actual')
                             
                         else:
+                            # time.sleep(0.01)
                             if status == 'worse': #'better':
                                 for curr in currs1:
                                     
-                                    open_trade(curr, "Sell", 1.0, commm)
+                                    open_trade(curr, "Sell", 1.0, commm, impact_ele[0])
                                 for curr in currs2: 
-                                    open_trade(curr, "Buy", 1.0, commm)
+                                    open_trade(curr, "Buy", 1.0, commm, impact_ele[0])
                                 
                             elif status == 'better':#'worse':
                                 for curr in currs1:
-                                    open_trade(curr, "Buy", 1.0, commm)
+                                    open_trade(curr, "Buy", 1.0, commm, impact_ele[0])
                                 for curr in currs2: 
-                                    open_trade(curr, "Sell", 1.0, commm)
+                                    open_trade(curr, "Sell", 1.0, commm, impact_ele[0])
                             else:
                                 print('Gray actual')
                         
@@ -276,6 +319,7 @@ while True:
                     
                 
                     except TimeoutException:
+                        print('E4')
                         print("Timeout waiting for actual value.")
                         driver.quit()
                         driver = webdriver.Chrome() # options=options)
@@ -286,6 +330,7 @@ while True:
                         pass
                         # break  # Exit loop after timeout
                     except Exception as e:
+                        print('E5')
                         time.sleep(0.1)
                         # actual_checker = actual_checker+1
     
@@ -298,7 +343,8 @@ while True:
                         # open new FF
                         driver.get("https://www.forexfactory.com/calendar?day=today")
                         time.sleep(5)
-                        pass
+                        continue
+                        # pass
                         # break
                         # rows = driver.find_elements(By.XPATH, "//tr[contains(@class, 'calendar__row')]")
             else:
@@ -330,7 +376,9 @@ while True:
                     
                     print(f"Actual: {actual_value}, Status: {status}")
                 except:
-                    pass
+                    print('E6')
+                    # pass
+                    continue
         # Get the current datetime in Casablanca
         nnow = datetime.now(tz)
         
@@ -351,8 +399,10 @@ while True:
             driver.get("https://www.forexfactory.com/calendar?day=today")
             time.sleep(5)
     except Exception as e:
+        print('E7')
         print(f"Error retrieving rows: {e}")
         print('check 1: error in getting the rows of calendar 1')
+        continue
     # driver.quit()
     # exit(1)
 
