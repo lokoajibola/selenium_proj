@@ -9,6 +9,8 @@ Created on Mon Feb 10 12:00:01 2025
 5. STRATEGY TO TRADE - BUY IF BETTER, SELL IF WORSE
 6. TP-10PTS, SL-20PTS || USE OF TRAILING SL
 
+download tor on https://archive.torproject.org/tor-package-archive/torbrowser/14.5a6/tor-expert-bundle-windows-x86_64-14.5a6.tar.gz
+open tor > tor.exe
 @author: jbriz
 """
 
@@ -21,6 +23,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
 
 
 import MetaTrader5 as mt5
@@ -139,7 +142,12 @@ def pend_trade(symbol, trade_type, volume, comment, impact, hi, lo):
         pass
 
 # 2. Initialize Selenium WebDriver
-driver = webdriver.Chrome() # options=options)
+# driver = webdriver.Chrome() # options=options)
+options = Options()
+options.add_argument('--proxy-server=socks5://127.0.0.1:9050')
+# options.add_argument('--headless')  # Optional
+
+driver = webdriver.Chrome(options=options)
 # Navigate to Forex Factory Calendar
 driver.get("https://www.forexfactory.com/calendar?day=today")
 # time.sleep(5)  # Allow page to load
@@ -304,7 +312,7 @@ while True:
                 try:
                     # Wait until the <span> inside the .calendar__actual cell appears
                     WebDriverWait(driver, 200).until(
-                        EC.presence_of_element_located((By.XPATH, f"(//td[contains(@class, 'calendar__actual')])[{j+1}]/span"))
+                        EC.presence_of_element_located((By.XPATH, f"(//td[contains(@class, 'calendar__actual')])[{i+1}]/span"))
                     )
                     
                     # Extract row text
