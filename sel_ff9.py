@@ -9,8 +9,6 @@ Created on Mon Feb 10 12:00:01 2025
 5. STRATEGY TO TRADE - BUY IF BETTER, SELL IF WORSE
 6. TP-10PTS, SL-20PTS || USE OF TRAILING SL
 
-download tor on https://archive.torproject.org/tor-package-archive/torbrowser/14.5a6/tor-expert-bundle-windows-x86_64-14.5a6.tar.gz
-open tor > tor.exe
 @author: jbriz
 """
 
@@ -36,6 +34,7 @@ import pytz
 
 
 actual_checker = 0
+done_check = 0
 
 
 # # LOGIN TO MT5
@@ -141,20 +140,48 @@ def pend_trade(symbol, trade_type, volume, comment, impact, hi, lo):
             print(f"Failed to Pend trade for {symbol}: {result.retcode}")
         pass
 
-# 2. Initialize Selenium WebDriver
-# driver = webdriver.Chrome() # options=options)
-options = Options()
-options.add_argument('--proxy-server=socks5://127.0.0.1:9050')
-# options.add_argument('--headless')  # Optional
+def find_matching_timezone(time_str):
+    # Parse the input time string (e.g., "10:09am") into a time object
+    input_time = datetime.datetime.strptime(time_str, "%I:%M%p").time()
 
-driver = webdriver.Chrome(options=options)
-# Navigate to Forex Factory Calendar
-driver.get("https://www.forexfactory.com/calendar?day=today")
-# time.sleep(5)  # Allow page to load
-WebDriverWait(driver, 10).until(lambda d: d.execute_script("return document.readyState") == "complete")
+    matching_zones = []
+    now_utc = datetime.datetime.utcnow()
+
+    for tz in pytz.all_timezones:
+        tz_now = pytz.timezone(tz).fromutc(now_utc)
+        if tz_now.time().hour == input_time.hour and tz_now.time().minute == input_time.minute:
+            matching_zones.append(tz)
+
+    return matching_zones
+
+
+# 2. Initialize Selenium WebDriver
+def get_ff():
+    options = Options()
+    options.add_argument('--proxy-server=socks5://127.0.0.1:9050')
+    # options.add_argument('--headless')  # Optional
+    
+    driver = webdriver.Chrome(options=options)
+    # Navigate to Forex Factory Calendar
+    driver.get("https://www.forexfactory.com/calendar?day=today")
+    WebDriverWait(driver, 10).until(lambda d: d.execute_script("return document.readyState") == "complete")
+    
+    
+    return driver
+
+
+driver = get_ff()
+# time.sleep(2)
+wait = WebDriverWait(driver, 10)
+ff_time = driver.execute_script(
+    "return document.querySelector('th[colspan=\"5\"] a.calendar__header-time').textContent"
+)
+
+zones = find_matching_timezone(ff_time)
+tz = pytz.timezone(zones[1])
 
 prev_time_elem = '12:01am'
-tz = pytz.timezone("Africa/Casablanca")
+# tz = pytz.timezone("Africa/Casablanca")
 naija_now = datetime.datetime.now(tz)
 
 # INITIATE EVENT TIME TO AVOID LOOP ERROR WHEN THE DAY STARTS WITH A BAD EVENT TIME
@@ -176,9 +203,9 @@ while True:
             while attempt <= 5 and not page_loaded:
                 try:
                     driver.quit()
-                    driver = webdriver.Chrome() # options=options)
-                    driver.get("https://www.forexfactory.com/calendar?day=today") 
-                    WebDriverWait(driver, 10).until(lambda d: d.execute_script("return document.readyState") == "complete") 
+                    driver = get_ff()
+ 
+                    # WebDriverWait(driver, 10).until(lambda d: d.execute_script("return document.readyState") == "complete") 
                     page_loaded = True
                     attempt = 1
                 except Exception as e:
@@ -226,20 +253,18 @@ while True:
                     pass
                 # Navigate to Forex Factory Calendar
                 driver.quit()
-                driver = webdriver.Chrome() # options=options)
-                
-                # open new FF
-                driver.get("https://www.forexfactory.com/calendar?day=today")
-                time.sleep(2)  # Allow page to load
+                driver = get_ff()
+
+                # time.sleep(2)  # Allow page to load
                             
                 event_elems = driver.find_elements(By.XPATH, "//td[contains(@class, 'calendar__event')]")
                 if len(event_elems) < 1: 
                     while attempt <= 5 and not page_loaded:
                         try:
                             driver.quit()
-                            driver = webdriver.Chrome() # options=options)
-                            driver.get("https://www.forexfactory.com/calendar?day=today") 
-                            WebDriverWait(driver, 10).until(lambda d: d.execute_script("return document.readyState") == "complete") 
+                            driver = get_ff()
+
+                            # WebDriverWait(driver, 10).until(lambda d: d.execute_script("return document.readyState") == "complete") 
                             page_loaded = True
                             attempt = 1
                         except Exception as e:
@@ -312,7 +337,7 @@ while True:
                 try:
                     # Wait until the <span> inside the .calendar__actual cell appears
                     WebDriverWait(driver, 200).until(
-                        EC.presence_of_element_located((By.XPATH, f"(//td[contains(@class, 'calendar__actual')])[{i+1}]/span"))
+                        EC.presence_of_element_located((By.XPATH, f"(//td[contains(@class, 'calendar__actual')])[{j+1}]/span"))
                     )
                     
                     # Extract row text
@@ -369,87 +394,89 @@ while True:
                         currs2 = ['EURUSD']
                         
                     commm = impact_ele[0] + ' ' + event_elems[i].text
-                    if impact_ele[0] == 'H' or impact_ele[0] == 'M': #and 'Farm' in  event_elems[i].text:
-                        time.sleep(30)
-                        news_time = event_time.minute
-                        
-                        if status == 'better': #'better':
+                    if i > done_check:
+                        if impact_ele[0] == 'H' or impact_ele[0] == 'M': #and 'Farm' in  event_elems[i].text:
+                            done_check = i
+                            time.sleep(30)
+                            news_time = event_time.minute
                             
-                            for curr in currs1:
-                                # hi, lo = get_rates(curr, news_time)
-                                open_trade(curr, "Sell", 1.0, commm, impact_ele[0])
-                                # pend_trade(curr, "Buy", 1.0, commm, impact_ele[0], hi, lo)
-                            for curr in currs2: 
-                                # hi, lo = get_rates(curr, news_time)
-                                open_trade(curr, "Buy", 1.0, commm, impact_ele[0])
-                                # pend_trade(curr, "Sell", 1.0, commm, impact_ele[0], hi, lo)
-                            
-                        elif status == 'worse':#'worse':
-                            for curr in currs1:
-                                # hi, lo = get_rates(curr, news_time)
-                                open_trade(curr, "Buy", 1.0, commm, impact_ele[0])
-                                # pend_trade(curr, "Sell", 1.0, commm, impact_ele[0], hi, lo)
-                            for curr in currs2: 
-                                # hi, lo = get_rates(curr, news_time)
-                                open_trade(curr, "Sell", 1.0, commm, impact_ele[0])
-                                # pend_trade(curr, "Buy", 1.0, commm, impact_ele[0], hi, lo)
-                        else:
-                            print('Gray actual')
-                      
-                    else:
-                        # time.sleep(0.01)
-                        if status == 'worse': #'better':
-                            for curr in currs1:
+                            if status == 'better': #'better':
                                 
-                                open_trade(curr, "Sell", 1.0, commm, impact_ele[0])
-                            for curr in currs2: 
-                                open_trade(curr, "Buy", 1.0, commm, impact_ele[0])
-                            
-                        elif status == 'better':#'worse':
-                            for curr in currs1:
-                                open_trade(curr, "Buy", 1.0, commm, impact_ele[0])
-                            for curr in currs2: 
-                                open_trade(curr, "Sell", 1.0, commm, impact_ele[0])
+                                for curr in currs1:
+                                    # hi, lo = get_rates(curr, news_time)
+                                    open_trade(curr, "Sell", 1.0, commm, impact_ele[0])
+                                    # pend_trade(curr, "Buy", 1.0, commm, impact_ele[0], hi, lo)
+                                for curr in currs2: 
+                                    # hi, lo = get_rates(curr, news_time)
+                                    open_trade(curr, "Buy", 1.0, commm, impact_ele[0])
+                                    # pend_trade(curr, "Sell", 1.0, commm, impact_ele[0], hi, lo)
+                                
+                            elif status == 'worse':#'worse':
+                                for curr in currs1:
+                                    # hi, lo = get_rates(curr, news_time)
+                                    open_trade(curr, "Buy", 1.0, commm, impact_ele[0])
+                                    # pend_trade(curr, "Sell", 1.0, commm, impact_ele[0], hi, lo)
+                                for curr in currs2: 
+                                    # hi, lo = get_rates(curr, news_time)
+                                    open_trade(curr, "Sell", 1.0, commm, impact_ele[0])
+                                    # pend_trade(curr, "Buy", 1.0, commm, impact_ele[0], hi, lo)
+                            else:
+                                print('Gray actual')
+                          
                         else:
-                            print('Gray actual')
+                            done_check = i
+                            # time.sleep(0.01)
+                            if status == 'worse': #'better':
+                                for curr in currs1:
+                                    
+                                    open_trade(curr, "Sell", 1.0, commm, impact_ele[0])
+                                for curr in currs2: 
+                                    open_trade(curr, "Buy", 1.0, commm, impact_ele[0])
+                                
+                            elif status == 'better':#'worse':
+                                for curr in currs1:
+                                    open_trade(curr, "Buy", 1.0, commm, impact_ele[0])
+                                for curr in currs2: 
+                                    open_trade(curr, "Sell", 1.0, commm, impact_ele[0])
+                            else:
+                                print('Gray actual')
+                                
+                        if impact_ele[0] == 'H' or impact_ele[0] == 'M' or impact_ele[0] == 'L': #and 'Farm' in  event_elems[i].text:
+                            done_check = i
+                            commm = impact_ele[0] + 'i ' + event_elems[i].text
+                            time.sleep(70)
+                            news_time = event_time.minute
                             
-                    if impact_ele[0] == 'H' or impact_ele[0] == 'M' or impact_ele[0] == 'L': #and 'Farm' in  event_elems[i].text:
-                        commm = impact_ele[0] + 'i ' + event_elems[i].text
-                        time.sleep(70)
-                        news_time = event_time.minute
+                            if status == 'better': #'better':
+                                
+                                for curr in currs1:
+                                    hi, lo = get_rates(curr, news_time)
+                                    pend_trade(curr, "Buy", 1.0, commm, impact_ele[0], hi, lo)
+                                for curr in currs2: 
+                                    hi, lo = get_rates(curr, news_time)
+                                    pend_trade(curr, "Sell", 1.0, commm, impact_ele[0], hi, lo)
+                                
+                            elif status == 'worse':#'worse':
+                                for curr in currs1:
+                                    hi, lo = get_rates(curr, news_time)
+                                    pend_trade(curr, "Sell", 1.0, commm, impact_ele[0], hi, lo)
+                                for curr in currs2: 
+                                    hi, lo = get_rates(curr, news_time)
+                                    pend_trade(curr, "Buy", 1.0, commm, impact_ele[0], hi, lo)
+                            else:
+                                print('Gray actual')  
                         
-                        if status == 'better': #'better':
-                            
-                            for curr in currs1:
-                                hi, lo = get_rates(curr, news_time)
-                                pend_trade(curr, "Buy", 1.0, commm, impact_ele[0], hi, lo)
-                            for curr in currs2: 
-                                hi, lo = get_rates(curr, news_time)
-                                pend_trade(curr, "Sell", 1.0, commm, impact_ele[0], hi, lo)
-                            
-                        elif status == 'worse':#'worse':
-                            for curr in currs1:
-                                hi, lo = get_rates(curr, news_time)
-                                pend_trade(curr, "Sell", 1.0, commm, impact_ele[0], hi, lo)
-                            for curr in currs2: 
-                                hi, lo = get_rates(curr, news_time)
-                                pend_trade(curr, "Buy", 1.0, commm, impact_ele[0], hi, lo)
-                        else:
-                            print('Gray actual')  
-                    
-                    # actual_checker = 0
-                    # break
+                        # actual_checker = 0
+                        # break
                 
             
                 except TimeoutException:
                     print('E7')
                     print("Timeout waiting for actual value.")
                     driver.quit()
-                    driver = webdriver.Chrome() # options=options)
-                    
-                    # open new FF
-                    driver.get("https://www.forexfactory.com/calendar?day=today")
-                    time.sleep(5)
+                    driver = get_ff()
+
+                    # time.sleep(5)
                     # pass
                     continue
                     # break  # Exit loop after timeout
@@ -461,11 +488,9 @@ while True:
                     print(f"Error retrieving rows: {e}")
 
                     driver.quit()
-                    driver = webdriver.Chrome() # options=options)
-                    
-                    # open new FF
-                    driver.get("https://www.forexfactory.com/calendar?day=today")
-                    time.sleep(5)
+                    driver = get_ff()
+
+                    # time.sleep(5)
                     continue
                     # pass
                     # break
@@ -485,18 +510,16 @@ while True:
             time.sleep(seconds_to_wait+10)
             
             driver.quit()
-            driver = webdriver.Chrome() # options=options)
-            
-            # open new FF
-            driver.get("https://www.forexfactory.com/calendar?day=today")
-            time.sleep(5)
+            driver = get_ff()
+
+            # time.sleep(5)
     except Exception as e:
         print(f'E10: Error retrieving rows: {e}')
         try:
             driver.quit()
-            driver = webdriver.Chrome() # options=options)
-            driver.get("https://www.forexfactory.com/calendar?day=today") 
-            WebDriverWait(driver, 10).until(lambda d: d.execute_script("return document.readyState") == "complete") 
+            driver = get_ff()
+
+            # WebDriverWait(driver, 10).until(lambda d: d.execute_script("return document.readyState") == "complete") 
             page_loaded = True
             attempt = 1
         except Exception as e:
