@@ -74,9 +74,9 @@ i = 50 # FVG in points
 
 
 # 1. LOGIN TO MT5
-account = 51962256
+account = xxxxxxx
 mt5.initialize("C:/Program Files/FxPro - MetaTrader 5/terminal64.exe")
-authorized=mt5.login(account, password="1nojf!W@MEUAz8", server = "mt5-demo.icmarkets.com")
+authorized=mt5.login(account, password="xxxxxxx", server = "mt5-demo.icmarkets.com")
 
 if authorized:
     print("Connected: Connecting to MT5 Client")
@@ -193,6 +193,7 @@ for row in df.itertuples(index=True):
             print(f"Error processing event {row.event}: {e}")
 
 # driver.quit()
+
 
 
 
