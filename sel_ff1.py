@@ -71,10 +71,7 @@ DU = 0
 time_frame = 60
 i = 50 # FVG in points
 
-# # LOGIN TO MT5
-# account = 7002735 #187255335 #51610727
-# mt5.initialize("C:/Program Files/MetaTrader 5 IC Markets (SC)/terminal64.exe")
-# authorized=mt5.login(account, password="xxxxxxxx", server = "ICMarketsSC-MT5-2")
+
 
 # 1. LOGIN TO MT5
 account = 51962256
@@ -196,5 +193,6 @@ for row in df.itertuples(index=True):
             print(f"Error processing event {row.event}: {e}")
 
 # driver.quit()
+
 
 
