@@ -37,15 +37,11 @@ actual_checker = 0
 done_check = 0
 
 
-# # LOGIN TO MT5
-# account = 7002735 #187255335 #51610727
-# mt5.initialize("C:/Program Files/MetaTrader 5 IC Markets (SC)/terminal64.exe")
-# authorized=mt5.login(account, password="xxxxxxxx", server = "ICMarketsSC-MT5-2")
 
 # 1. LOGIN TO MT5
-account = 51962256
+account = xxxxxxx
 mt5.initialize("C:/Program Files/FxPro - MetaTrader 5/terminal64.exe")
-authorized=mt5.login(account, password="1nojf!W@MEUAz8", server = "mt5-demo.icmarkets.com")
+authorized=mt5.login(account, password="xxxxxx", server = "mt5-demo.icmarkets.com")
 
 if authorized:
     print("Connected: Connecting to MT5 Client")
@@ -530,6 +526,7 @@ while True:
         continue
     # driver.quit()
     # exit(1)
+
 
 
 
